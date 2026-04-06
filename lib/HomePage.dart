@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:ffi';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:packman/ghost.dart';
 import 'package:packman/ghost3.dart';
 import 'package:packman/ghost2.dart';
@@ -11,7 +9,6 @@ import 'package:packman/path.dart';
 import 'package:packman/pixel.dart';
 import 'package:packman/player.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:audioplayers/audio_cache.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -30,12 +27,10 @@ class _HomePageState extends State<HomePage> {
   var controller;
   int score = 0;
   bool paused = false;
-  AudioPlayer advancedPlayer = new AudioPlayer();
-  AudioPlayer advancedPlayer2 = new AudioPlayer();
-  AudioCache audioInGame = new AudioCache(prefix: 'assets/');
-  AudioCache audioMunch = new AudioCache(prefix: 'assets/');
-  AudioCache audioDeath = new AudioCache(prefix: 'assets/');
-  AudioCache audioPaused = new AudioCache(prefix: 'assets/');
+  AudioPlayer advancedPlayer = AudioPlayer();
+  AudioPlayer audioMunch = AudioPlayer();
+  AudioPlayer audioDeath = AudioPlayer();
+  AudioPlayer audioPaused = AudioPlayer();
   List<int> barriers = [
     0,
     1,
@@ -141,10 +136,11 @@ class _HomePageState extends State<HomePage> {
 
   void startGame() {
     if (preGame) {
-      advancedPlayer = new AudioPlayer();
-      audioInGame = new AudioCache(fixedPlayer: advancedPlayer);
-      audioPaused = new AudioCache(fixedPlayer: advancedPlayer2);
-      audioInGame.loop('pacman_beginning.wav');
+      advancedPlayer = AudioPlayer();
+      advancedPlayer.setReleaseMode(ReleaseMode.loop);
+      advancedPlayer.play(AssetSource('pacman_beginning.wav'));
+      audioPaused = AudioPlayer();
+      audioPaused.setReleaseMode(ReleaseMode.loop);
       preGame = false;
       getFood();
 
@@ -155,7 +151,7 @@ class _HomePageState extends State<HomePage> {
         }
         if (player == ghost || player == ghost2 || player == ghost3) {
           advancedPlayer.stop();
-          audioDeath.play('pacman_death.wav');
+          audioDeath.play(AssetSource('pacman_death.wav'));
           setState(() {
             player = -1;
           });
@@ -167,9 +163,11 @@ class _HomePageState extends State<HomePage> {
                   title: Center(child: Text("Game Over!")),
                   content: Text("Your Score : " + (score).toString()),
                   actions: [
-                    RaisedButton(
+                    TextButton(
                       onPressed: () {
-                        audioInGame.loop('pacman_beginning.wav');
+                        advancedPlayer.setReleaseMode(ReleaseMode.loop);
+                        advancedPlayer
+                            .play(AssetSource('pacman_beginning.wav'));
                         setState(() {
                           player = numberInRow * 14 + 1;
                           ghost = numberInRow * 2 - 2;
@@ -185,8 +183,7 @@ class _HomePageState extends State<HomePage> {
                           Navigator.pop(context);
                         });
                       },
-                      textColor: Colors.white,
-                      padding: const EdgeInsets.all(0.0),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
                       child: Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
@@ -198,7 +195,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         padding: const EdgeInsets.all(10.0),
-                        child: const Text('Restart'),
+                        child: const Text('Restart',
+                            style: TextStyle(color: Colors.white)),
                       ),
                     )
                   ],
@@ -218,7 +216,7 @@ class _HomePageState extends State<HomePage> {
           mouthClosed = !mouthClosed;
         });
         if (food.contains(player)) {
-          audioMunch.play('pacman_chomp.wav');
+          audioMunch.play(AssetSource('pacman_chomp.wav'));
           setState(() {
             food.remove(player);
           });
@@ -694,22 +692,18 @@ class _HomePageState extends State<HomePage> {
                             angle: pi,
                             child: MyPlayer(),
                           );
-                          break;
                         case "right":
                           return MyPlayer();
-                          break;
                         case "up":
                           return Transform.rotate(
                             angle: 3 * pi / 2,
                             child: MyPlayer(),
                           );
-                          break;
                         case "down":
                           return Transform.rotate(
                             angle: pi / 2,
                             child: MyPlayer(),
                           );
-                          break;
                         default:
                           return MyPlayer();
                       }
@@ -770,12 +764,13 @@ class _HomePageState extends State<HomePage> {
                           {
                             paused = true,
                             advancedPlayer.pause(),
-                            audioPaused.loop('pacman_intermission.wav'),
+                            audioPaused
+                                .play(AssetSource('pacman_intermission.wav')),
                           }
                         else
                           {
                             paused = false,
-                            advancedPlayer2.stop(),
+                            audioPaused.stop(),
                           },
                         Icon(
                           Icons.play_arrow,
@@ -791,12 +786,13 @@ class _HomePageState extends State<HomePage> {
                       ),
                       onTap: () => {
                         if (paused)
-                          {paused = false, advancedPlayer2.stop()}
+                          {paused = false, audioPaused.stop()}
                         else
                           {
                             paused = true,
                             advancedPlayer.pause(),
-                            audioPaused.loop('pacman_intermission.wav'),
+                            audioPaused
+                                .play(AssetSource('pacman_intermission.wav')),
                           },
                       },
                     ),
