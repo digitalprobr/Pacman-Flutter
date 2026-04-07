@@ -1,0 +1,73 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+
+android {
+    compileSdkVersion 33
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.example.packman"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.10"
+}
+
+// Manual Flutter integration (workaround for deprecated flutter.gradle script)
+import java.nio.file.Paths
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+// Get Flutter's Dart/Kernel snapshot paths
+def flutterExecutable = System.getProperty('os.name').toLowerCase().contains('windows') ? 
+    Paths.get(flutterRoot).resolve('bin/flutter.bat').toString() :
+    Paths.get(flutterRoot).resolve('bin/flutter').toString()
+
+// Define Flutter build task
+task flutterBuildRelease(type: Exec) {
+    workingDir rootProject.projectDir.parentFile.parentFile
+    commandLine flutterExecutable, 'build', 'apk', '--release'
+}
+
+// Hook the Flutter build into the Android build
+android.applicationVariants.all { variant ->
+    if (variant.name == 'release') {
+        variant.outputs.all { output ->
+            def flutterBuildTask = tasks.findByName('flutterBuildRelease')
+            if (flutterBuildTask) {
+                tasks.named('assemble' + variant.name.capitalize()) {
+                    dependsOn flutterBuildTask
+                }
+            }
+        }
+    }
+}
+
+
